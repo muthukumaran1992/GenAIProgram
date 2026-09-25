@@ -1,0 +1,4 @@
+from incidents import incidents
+
+for incident in incidents:
+    print(incident)

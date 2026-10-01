@@ -73,12 +73,108 @@ selected_incident = st.selectbox(
 
 if selected_incident == "All":
     displayed_incidents = filtered_incidents
+    st.dataframe(displayed_incidents)
 else:
     displayed_incidents = [
         incident
         for incident in filtered_incidents
         if incident["id"] == selected_incident
     ]
+    st.subheader("Incident Details")
+    st.dataframe(displayed_incidents)
 
-st.dataframe(displayed_incidents)
+    if st.button("Analyze Incident"):
+        try:
+            response = requests.get(
+                f"{API_URL}/incidents/{selected_incident}/analyze",
+                timeout=60,
+            )
+            response.raise_for_status()
+            result = response.json()
+            analysis = result["analysis"]
+
+            if isinstance(analysis, str):
+                st.subheader("AI Analysis")
+                st.write(analysis)
+            else:
+                st.subheader("Confirmed Facts")
+                for fact in analysis["confirmed_facts"]:
+                    st.write("•", fact)
+
+                st.subheader("Probable Contributing Factors")
+                for factor in analysis["probable_contributing_factors"]:
+                    st.write("•", factor)
+
+                st.subheader("Business Impact")
+                st.write(analysis["business_impact"])
+
+                st.subheader("Missing Information")
+                for item in analysis["missing_information"]:
+                    st.write("•", item)
+
+                st.subheader("Recommended Next Steps")
+                for step in analysis["recommended_next_steps"]:
+                    st.write("•", step)
+        except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+            st.error(f"Unable to analyze incident: {error}")
+
+st.divider()
+
+st.header("Ask Incident Intelligence")
+
+question = st.text_input(
+    "Enter your incident question",
+    placeholder="What evidence is available about the Payment API incident?"
+)
+
+if st.button("Ask AI"):
+
+    if not question.strip():
+        st.warning("Please enter a question.")
+        st.stop()
+
+    try:
+        response = requests.post(
+            f"{API_URL}/incidents/ask",
+            json={"question": question},
+            timeout=60
+        )
+
+        response.raise_for_status()
+
+        result = response.json()["analysis"]
+
+        st.subheader("Confirmed Facts")
+        for item in result["confirmed_facts"]:
+            st.write(f"- {item}")
+
+        st.subheader("Observed Patterns")
+        for item in result["observed_patterns"]:
+            st.write(f"- {item}")
+
+        st.subheader("Probable Contributing Factors")
+        for item in result["probable_contributing_factors"]:
+            st.write(f"- {item}")
+
+        st.subheader("Missing Evidence")
+        for item in result["missing_evidence"]:
+            st.write(f"- {item}")
+
+        st.subheader("Recommended Investigation Areas")
+        for item in result["recommended_investigation_areas"]:
+            st.write(f"- {item}")
+
+        st.subheader("Supporting Evidence")
+        supporting_evidence = result.get("supporting_evidence", [])
+        if supporting_evidence:
+            for reference in supporting_evidence:
+                st.write(f"**{reference['incident_id']}**: {reference['evidence']}")
+        else:
+            st.write("No supporting evidence was identified.")
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"Unable to connect to Incident Intelligence API: {e}")
+
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
 

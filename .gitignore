@@ -4,3 +4,9 @@
 /Lv.py
 /requirements.txt
 /requirements.txt.txt
+
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
+OpenAI_keys.txt
